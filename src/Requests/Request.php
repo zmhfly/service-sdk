@@ -5,7 +5,11 @@
  */
 namespace Uniondrug\ServiceSdk\Requests;
 
+use Phalcon\Di;
 use Phalcon\Logger\AdapterInterface;
+use Uniondrug\Framework\Container;
+use Uniondrug\Phar\Server\XHttp;
+use Uniondrug\Phar\Server\XSocket;
 use Uniondrug\ServiceSdk\Configs\Config;
 use Uniondrug\ServiceSdk\Responses\Response;
 use Uniondrug\ServiceSdk\Responses\ResponseInterface;
@@ -53,7 +57,7 @@ class Request
      * 请求ID
      * @var string
      */
-    public $requestId;
+    public $requestId = '';
     /**
      * @var string
      */
@@ -70,6 +74,14 @@ class Request
      * @var array
      */
     public $requestOptions;
+    /**
+     * @var Container
+     */
+    private $container;
+    /**
+     * @var XHttp|XSocket
+     */
+    private $server;
 
     /**
      * @param AdapterInterface $logger
@@ -85,16 +97,15 @@ class Request
         $this->config = $config;
         $this->cacheDeadline = $cacheDeadline;
         $this->retryTimes = $retryTimes;
-        // 2. request id
-        $reqKey = strtoupper(Config::REQID_KEY);
-        $reqName = strtoupper(Config::REQID_NAME);
-        $requestId = isset($_SERVER[$reqKey]) ? $_SERVER[$reqKey] : null;
-        $requestId || $requestId = isset($_SERVER[$reqName]) ? $_SERVER[$reqName] : null;
-        $requestId || $requestId = uniqid('req');
-        $this->requestId = $requestId;
-        // 3. assign server
-        $_SERVER[$reqKey] = $requestId;
-        $_SERVER[$reqName] = $requestId;
+        // 2. Container
+        $this->container = Di::getDefault();
+        if ($this->container->has('server')){
+            $server = $this->container->get('server');
+            if ($server instanceof XHttp || $server instanceof XSocket){
+                $this->server = $server;
+                $this->requestId = $this->server->getTrace()->getTrace();
+            }
+        }
     }
 
     /**
@@ -207,8 +218,9 @@ class Request
      */
     public function optionsMerger(array $options)
     {
-        $options['headers'][Config::REQID_KEY] = $this->requestId;
-        $options['headers'][Config::REQID_NAME] = $this->requestId;
+        if ($this->server !== null){
+            $options['headers'] = array_merge_recursive($options['headers'], $this->server->getTrace()->getHeaderDatas());
+        }
         return $options;
     }
 }
