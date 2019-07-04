@@ -1,0 +1,22 @@
+{
+    "name" : "uniondrug/service-sdk",
+    "type" : "library",
+    "description" : "micro service, dependents on phalcon & consul",
+    "license" : "MIT",
+    "authors" : [
+        {
+            "name" : "fuyibing",
+            "email" : "fuyibing@uniondrug.cn"
+        }
+    ],
+    "require" : {
+        "php" : ">=7.0",
+        "ext-phalcon" : "^3.2.0",
+        "guzzlehttp/guzzle" : "^6.0.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Uniondrug\\ServiceSdk\\": "src/"
+        }
+    }
+}
