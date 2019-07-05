@@ -6,11 +6,15 @@
 namespace Uniondrug\ServiceSdk;
 
 /**
- * 兼容
- * 1. v1.x
- * 2. v2.x
+ * IDE注解
+ * 下以注释内容由代码生成, 请不要手工修改
+ *
+ * <code>
+ * php src/Base/annotation.php
+ * </code>
+ *
  * @package Uniondrug\ServiceSdk
  */
-class ServiceSdk
+class ServiceSdk extends Compatiables\Abstracts\Sdk
 {
 }

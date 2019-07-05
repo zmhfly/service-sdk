@@ -8,6 +8,6 @@ namespace Uniondrug\ServiceSdk;
 /**
  * @package Uniondrug\ServiceSdk
  */
-class SdkServiceProvider extends Providers\V1Provider
+class SdkServiceProvider extends Providers\Provider
 {
 }
