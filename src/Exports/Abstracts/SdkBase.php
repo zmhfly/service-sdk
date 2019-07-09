@@ -23,6 +23,6 @@ abstract class SdkBase extends Sdk
     public function __construct(Container $container, $name)
     {
         parent::__construct($container, $name);
-        parent::__v2();
+        parent::_v2();
     }
 }

@@ -5,5 +5,8 @@
  */
 return [
     'default' => [
+        'timeout' => 30,
+        'allowRedirects' => false,
+        'htmlErrors' => false
     ]
 ];

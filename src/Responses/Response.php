@@ -43,6 +43,14 @@ class Response implements ResponseInterface
     }
 
     /**
+     * @return $this
+     */
+    public function endsdk()
+    {
+        return $this;
+    }
+
+    /**
      * 读取原文
      * @return string
      */

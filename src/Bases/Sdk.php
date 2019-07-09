@@ -8,6 +8,7 @@ namespace Uniondrug\ServiceSdk\Bases;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Stream;
 use Uniondrug\Framework\Container;
+use Uniondrug\ServiceSdk\Exceptions\Compatiable;
 use Uniondrug\ServiceSdk\Exceptions\Invalid;
 use Uniondrug\ServiceSdk\Exceptions\Undefined;
 use Uniondrug\ServiceSdk\Responses\Response;
@@ -23,6 +24,12 @@ abstract class Sdk
      * @var Client
      */
     private static $client;
+    /**
+     * Consul地址
+     * @var string
+     */
+    private static $consulApiHost;
+    private static $consulApiAddress;
     /**
      * 容器
      * @var Container
@@ -76,16 +83,22 @@ abstract class Sdk
         }
         // 2. default options
         if (self::$defaultOptions === null) {
-            // 2.1 default
+            // 2.1 Timeout
+            $timeout = (int) $this->container->getConfig()->path('sdk.timeout');
+            $timeout > 0 || $timeout = 30;
+            // 2.2 html errors
+            $htmlErrors = $this->container->getConfig()->path('sdk.htmlErrors') === true;
+            // 2.3 allow_redirects
+            $allowRedirects = $this->container->getConfig()->path('sdk.allowRedirects') === true;
+            // 2.2 default
             self::$defaultOptions = [
-                'allow_redirects' => false,
-                'html_errors' => false,
-                'timeout' => 30,
+                'allow_redirects' => $allowRedirects,
+                'html_errors' => $htmlErrors,
+                'timeout' => $timeout,
                 'headers' => [
                     'User-Agent' => $container->getConfig()->path('app.appName', 'unknown').'/'.$container->getConfig()->path('app.appVersion', '0.0.0')
                 ]
             ];
-            // 2.2 configuration
         }
     }
 
@@ -137,6 +150,20 @@ abstract class Sdk
                 $options['headers']['content-type'] = 'application/json';
             }
         }
+        // 3. send request
+        $response = $this->_request($method, $url, $options);
+        $response->endsdk();
+        return $response;
+    }
+
+    /**
+     * @param string $method
+     * @param string $url
+     * @param array  $options
+     * @return Response
+     */
+    protected function _request(string $method, string $url, array $options = [])
+    {
         // 3 call http client
         if (self::$client === null) {
             self::$client = $this->container->getShared('httpClient');
@@ -166,17 +193,57 @@ abstract class Sdk
 
     /**
      * 兼容V1
+     * @throws Compatiable
      */
-    protected function __v1()
+    protected function _v1()
     {
-        $this->serviceHost = 'http://192.168.10.127:8000';
+        // 1. defined or not
+        $host = $this->container->getConfig()->path("sdk.compatiables.{$this->name}");
+        if (!is_string($host) || $host === '') {
+            throw new Compatiable("host for {$this->name} not defined");
+        }
+        // 2. add prefix
+        if (preg_match("/^https?:\/\//", $host) === 0) {
+            $host = "http://${host}";
+        }
+        // 3. remove end slashes
+        $host = preg_replace("/[\/]+$/", "", $host);
+        $this->serviceHost = $host;
     }
 
     /**
      * 兼容V2
      */
-    protected function __v2()
+    protected function _v2()
     {
-        $this->serviceHost = 'http://192.168.10.127:8000';
+        // 1. prepare
+        if (self::$consulApiAddress === null) {
+            $consulApiAddress = $this->container->getConfig()->path('sdk.consulApiAddress');
+            if (is_string($consulApiAddress) && preg_match("/(https?):\/\/([^\/]+)/i", $consulApiAddress, $m) > 0) {
+                self::$consulApiHost = $m[1]."://".$m[2];
+                self::$consulApiAddress = $consulApiAddress;
+            } else {
+                throw new Invalid("error value for sdk field consulApiAddress.");
+            }
+        }
+        // 2. request options
+        $timeout = (int) $this->container->getConfig()->path('sdk.consulApiTimeout');
+        $timeout > 0 || $timeout = 3;
+        // 3. send request
+        $response = $this->_request("GET", self::$consulApiAddress, [
+            'timeout' => $timeout
+        ]);
+        if ($response->hasError()){
+            throw new Invalid("consul error: {$response->getError()}");
+        }
+
+        // 4. consul response contents
+        $contents = $response->getContents();
+        print_r ($contents);
+
+
+        // print response
+
+//        $this->serviceHost = 'http://192.168.10.127:8000';
     }
 }
